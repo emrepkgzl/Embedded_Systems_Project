@@ -42,14 +42,21 @@
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim6;
 
-/* USER CODE BEGIN PV */
+UART_HandleTypeDef huart2;
 
+/* USER CODE BEGIN PV */
+uint8_t Rx_data[8];
+uint8_t watering_time;
+uint8_t instant_watering_time;
+uint8_t waiting_time;
+char message[3];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM6_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -166,8 +173,10 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM6_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start(&htim6);
+  HAL_UART_Receive_IT(&huart2, Rx_data, 3);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -184,7 +193,21 @@ int main(void)
 	   	  Temp_byte1 = DHT11_Read ();
 	   	  Temp_byte2 = DHT11_Read ();
 
-	   	HAL_Delay(1000);
+	   	HAL_Delay(1500);
+
+	   	message[0] = 125;
+	   	message[1] = (Rh_byte1 / 10);
+	   	message[2] = (Rh_byte1 % 10);
+
+	   	HAL_Delay(1500);
+
+	   	HAL_UART_Transmit(&huart2, (uint8_t*)message, 3, HAL_MAX_DELAY);
+
+		message[0] = 126;
+		message[1] = (Temp_byte1 / 10);
+		message[2] = (Temp_byte1 % 10);
+
+	  HAL_UART_Transmit(&huart2, (uint8_t*)message, 3, HAL_MAX_DELAY);
 
   }
   /* USER CODE END 3 */
@@ -274,6 +297,39 @@ static void MX_TIM6_Init(void)
 }
 
 /**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -303,7 +359,50 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	/* interrupti tekrardan aktiflestir */
+	HAL_UART_Receive_IT(&huart2, Rx_data, 3);
+	/* hangi limit oldugunu kontrol et */
+	if((Rx_data[0] - '0') == 1)
+	{
+		/* char dan int e donustur */
+		watering_time = (Rx_data[1] - '0') * 10;
+		watering_time += (Rx_data[2] - '0');
+	}
+	else if((Rx_data[0] - '0') == 2)
+	{
+		/* char dan int e donustur */
+		waiting_time = (Rx_data[1] - '0') * 10;
+		waiting_time += (Rx_data[2] - '0');
+	}
+	else if((Rx_data[0] - '0') == 3)
+	{
+		/* char dan int e donustur */
+		instant_watering_time = (Rx_data[1] - '0') * 10;
+		instant_watering_time += (Rx_data[2] - '0');
+	}
+	else if((Rx_data[0] - '0') == 4)
+	{
+		if((Rx_data[1] - '0') == 1)
+		{
+			//do instant watering
+		}
+		else
+		{
+			//do nothing
+		}
+		if((Rx_data[2] - '0') == 1)
+		{
+			//turn on fan
+		}
+		else
+		{
+			//turn off fan
+		}
+	}
 
+}
 /* USER CODE END 4 */
 
 /**
