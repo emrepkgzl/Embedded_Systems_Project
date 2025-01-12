@@ -13,118 +13,115 @@ PubSubClient client(espClient);
 unsigned long lastMsg = 0;
 #define MSG_BUFFER_SIZE  (50)
 char msg[MSG_BUFFER_SIZE];
+char fan = 0;
 
 void setup_wifi() {
 
   delay(10);
   // We start by connecting to a WiFi network
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
+  ///////////////////////////////////////////////////////////////////Serial.println();
+  ///////////////////////////////////////////////////////////////////Serial.print("Connecting to ");
+  ///////////////////////////////////////////////////////////////////Serial.println(ssid);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
+    ///////////////////////////////////////////////////////////////////Serial.print(".");
   }
 
   randomSeed(micros());
 
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
+  ///////////////////////////////////////////////////////////////////Serial.println("");
+  ///////////////////////////////////////////////////////////////////Serial.println("WiFi connected");
+  ///////////////////////////////////////////////////////////////////Serial.println("IP address: ");
+  ///////////////////////////////////////////////////////////////////Serial.println(WiFi.localIP());
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
+  //Serial.print("Message arrived [");
+  //Serial.print(topic);
+  //Serial.print("] ");
   //for (int i = 0; i < length; i++) { Serial.print((char)payload[i]); }
 
-   String topics = String(topic);
-   
-    if(topics == "TELESERA/instant_watering_time")
-    {
-      Serial.print("Anlık sulama süresi: ");
-      for (int i = 0; i < length; i++) 
-      { 
-        Serial.print((char)payload[i]); 
-        }
-      Serial.println("ms");
-    }
-    else if(topics == "TELESERA/watering_time")
-    {
-      Serial.print("Sulama süresi: ");
-      for (int i = 0; i < length; i++) 
-      { 
-        Serial.print((char)payload[i]); 
-        }
-      Serial.println("ms");
-    }
-    else if(topics == "TELESERA/waiting_time")
-    {
-      Serial.print("Bekleme süresi: ");
-      for (int i = 0; i < length; i++) 
-      { 
-        Serial.print((char)payload[i]); 
-        }
-      Serial.println("dk");
-    }
-    else if(topics == "TELESERA/fan")
-    {
-      Serial.print("Fan durumu: ");
-      for (int i = 0; i < length; i++) 
-      { 
-        Serial.print((char)payload[i]); 
-        }
-      Serial.println("");
-    }
-    else if(topics == "TELESERA/instant_watering")
-    {
-      Serial.print("Anlık sulama: ");
-      char anlik_sulama[length];
-      for (int i = 0; i < length; i++) 
-      { 
-        Serial.print((char)payload[i]); 
-        anlik_sulama[i] = (char)payload[i];
+  String topics = String(topic);
 
-        if(anlik_sulama[i] == 'c')
-        {
-          client.publish("TELESERA/instant_watering", "Kapali");
-        }
-      }
-        
-        
-      Serial.println("");
+  if (topics == "TELESERA/instant_watering_time")
+  {
+    //Serial.print("Anlık sulama süresi: ");
+    Serial.print('3');
+    for (int i = 0; i < length; i++)
+    {
+      Serial.print((char)payload[i]);
     }
+    delay(50);
+    //Serial.println("ms");
+  }
+  else if (topics == "TELESERA/watering_time")
+  {
+    //Serial.print("Sulama süresi: ");
+    Serial.print('1');
+    for (int i = 0; i < length; i++)
+    {
+      Serial.print((char)payload[i]);
+    }
+    delay(50);
+    //Serial.println("ms");
+  }
+  else if (topics == "TELESERA/waiting_time")
+  {
+    //Serial.print("Bekleme süresi: ");
+    Serial.print('2');
+    for (int i = 0; i < length; i++)
+    {
+      Serial.print((char)payload[i]);
+    }
+    delay(50);
+    //Serial.println("dk");
+  }
+  else if (topics == "TELESERA/fan")
+  {
+    Serial.print('4');
+    Serial.print('0');
+    Serial.print((char)payload[0]);
+    fan = (char)payload[0];
+    delay(50);
+  }
+  else if (topics == "TELESERA/instant_watering")
+  {
+    Serial.print('4');
+    Serial.print((char)payload[0]);
+    Serial.print(fan);
+    delay(50);
+    if((char)payload[0] == '1')
+    {
+      client.publish("TELESERA/instant_watering", "0");
+    }
+  }
 
-    topics = "";
-    
-  Serial.println();
+  topics = "";
+
+  //Serial.println();
 
   //12.11.2023.10.33.45
 
-    /*snprintf (msg, MSG_BUFFER_SIZE, "TurnOnHour is :%d", ssetTurnOnHour);
+  /*snprintf (msg, MSG_BUFFER_SIZE, "TurnOnHour is :%d", ssetTurnOnHour);
     Serial.print("Publish message: ");
     Serial.println(msg);
     client.publish("GX5632AC8/TurnOnHour", msg);    */
-  
-
 }
 
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
+    ///////////////////////////////////////////////////////////////////Serial.print("Attempting MQTT connection...");
     // Create a random client ID
     String clientId = "ESP8266Client-";
     clientId += String(random(0xffff), HEX);
     // Attempt to connect
     if (client.connect(clientId.c_str())) {
-      Serial.println("connected");
+      ///////////////////////////////////////////////////////////////////Serial.println("connected");
       // Once connected, publish an announcement...
       client.publish("TELESERA/temp", "20");
       // ... and resubscribe
@@ -143,12 +140,12 @@ void reconnect() {
       client.subscribe("TELESERA/waiting_time");
       client.subscribe("TELESERA/fan");
       client.subscribe("TELESERA/instant_watering");
-    } 
-    else 
+    }
+    else
     {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
+      ///////////////////////////////////////////////////////////////////Serial.print("failed, rc=");
+      ///////////////////////////////////////////////////////////////////Serial.print(client.state());
+      ///////////////////////////////////////////////////////////////////Serial.println(" try again in 5 seconds");
       // Wait 5 seconds before retrying
       delay(5000);
     }
@@ -164,38 +161,65 @@ void setup() {
 }
 
 int counter = 0;
+char gelenVeri[3];
+int sayac = 0;
+char mqtt_message[2];
 
 void loop() {
 
   if (!client.connected()) {
-    if(counter < 3)
+    if (counter < 3)
     {
       counter++;
       reconnect();
     }
-    
   }
   client.loop();
 
+  if (Serial.available() > 0) 
+    { /* bilgisayardan veri gelmesini bekliyoruz */
+      gelenVeri[sayac] = Serial.read(); /* bilgisayardan gelen karakteri oku */
+      sayac++;
+      if(sayac == 3)
+      {
+        sayac = 0;
+        /*for(int j = 0; j < 3; j++)
+        {
+          Serial.print(gelenVeri[j]);
+        }*/
+        if(gelenVeri[0] == 125)
+        {
+          mqtt_message[0] = '0' + gelenVeri[1];
+          mqtt_message[1] = '0' + gelenVeri[2];
+          client.publish("TELESERA/hum", mqtt_message);
+        }
+        else if(gelenVeri[0] == 126)
+        {
+          mqtt_message[0] = '0' + gelenVeri[1];
+          mqtt_message[1] = '0' + gelenVeri[2];
+          client.publish("TELESERA/temp", mqtt_message);
+        }
+      }
+   }
+
   /*snprintf (msg, MSG_BUFFER_SIZE, "TurnOnMinute is :%d", ssetTurnOnMinute);
-  Serial.print("Publish message: ");
-  Serial.println(msg);
-  client.publish("TELESERA/TurnOnMinute", msg);  */    
-   
+    Serial.print("Publish message: ");
+    Serial.println(msg);
+    client.publish("TELESERA/TurnOnMinute", msg);  */
+
 }
 
 void publishInt(int val, char label1[11])
 {
-
   char label[11] = "TELESERA/";
   char val1[3];
   char result[27];
   strcat(result, label);
   strcat(result, label1);
   snprintf(val1, sizeof(val1), "%d", val);
-  Serial.println("AAAAA");
+  ///////////////////////////////////////////////////////////////////Serial.println("AAAAA");
 
   client.publish(result, val1);
-  Serial.println(result);
-  Serial.println(val);
+  ///////////////////////////////////////////////////////////////////Serial.println(result);
+  ///////////////////////////////////////////////////////////////////Serial.println(val);
 }
