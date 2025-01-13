@@ -4,8 +4,8 @@
 
 Preferences pref;
 
-const char* ssid = "DUNDER MUFFLIN INC.";
-const char* password = "FYNkjbrzyK";
+const char* ssid = "xxxx";
+const char* password = "xxxx";
 const char* mqtt_server = "test.mosquitto.org";  // test.mosquitto.org
 
 WiFiClient espClient;
@@ -14,6 +14,7 @@ unsigned long lastMsg = 0;
 #define MSG_BUFFER_SIZE  (50)
 char msg[MSG_BUFFER_SIZE];
 char fan = 0;
+long long int sysTime = 0;
 
 void setup_wifi() {
 
@@ -176,6 +177,21 @@ void loop() {
   }
   client.loop();
 
+  /*if((millis() - sysTime) > 60000)
+  {
+    sysTime = millis();
+    if((sysTime/600000) > 0)
+    {
+      mqtt_message[0] = '0' + (sysTime/600000);
+    }
+    else
+    {
+      mqtt_message[0] = '  ';
+    }
+    mqtt_message[1] = '0' + ((sysTime/60000)%10);
+    client.publish("TELESERA/systime", mqtt_message);
+  }*/
+
   if (Serial.available() > 0) 
     { /* bilgisayardan veri gelmesini bekliyoruz */
       gelenVeri[sayac] = Serial.read(); /* bilgisayardan gelen karakteri oku */
@@ -187,7 +203,19 @@ void loop() {
         {
           Serial.print(gelenVeri[j]);
         }*/
-        if(gelenVeri[0] == 125)
+        if(gelenVeri[0] == 123)
+        {
+          mqtt_message[0] = '0' + gelenVeri[1];
+          mqtt_message[1] = '0' + gelenVeri[2];
+          client.publish("TELESERA/terr_hum", mqtt_message);
+        }
+        else if(gelenVeri[0] == 124)
+        {
+          mqtt_message[0] = '0' + gelenVeri[1];
+          mqtt_message[1] = '0' + gelenVeri[2];
+          client.publish("TELESERA/light", mqtt_message);
+        }
+        else if(gelenVeri[0] == 125)
         {
           mqtt_message[0] = '0' + gelenVeri[1];
           mqtt_message[1] = '0' + gelenVeri[2];
