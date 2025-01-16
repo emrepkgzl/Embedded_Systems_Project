@@ -166,7 +166,7 @@
                 android:layout_width="170dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Fan: Açık"
+                android:text="Fan: Kapalı"
                 android:textColor="#1c5232"
                 android:textSize="22sp" />
 
@@ -175,7 +175,7 @@
                 android:layout_width="170dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Sys Zmanı: 7dk"
+                android:text="Sys Zmanı: 0dk"
                 android:textColor="#1c5232"
                 android:textSize="22sp" />
 

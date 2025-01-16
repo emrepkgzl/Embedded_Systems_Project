@@ -4,8 +4,8 @@
 
 Preferences pref;
 
-const char* ssid = "xxxx";
-const char* password = "xxxx";
+const char* ssid = "xxxxxxxx";
+const char* password = "xxxxxxxx";
 const char* mqtt_server = "test.mosquitto.org";  // test.mosquitto.org
 
 WiFiClient espClient;
@@ -15,6 +15,7 @@ unsigned long lastMsg = 0;
 char msg[MSG_BUFFER_SIZE];
 char fan = 0;
 long long int sysTime = 0;
+int delay_time = 1000;
 
 void setup_wifi() {
 
@@ -52,10 +53,15 @@ void callback(char* topic, byte* payload, unsigned int length) {
   {
     //Serial.print("Anlık sulama süresi: ");
     Serial.print('3');
+    delay_time = 0;
     for (int i = 0; i < length; i++)
     {
       Serial.print((char)payload[i]);
     }
+    delay_time = (payload[0] - '0') * 100;
+    delay_time += (payload[1] - '0') * 10;
+    delay_time += (payload[2] - '0');
+
     delay(50);
     //Serial.println("ms");
   }
@@ -87,6 +93,16 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial.print('0');
     Serial.print((char)payload[0]);
     fan = (char)payload[0];
+    if((char)payload[0] == '1')
+    {
+      digitalWrite(D1, LOW);
+      digitalWrite(D2, LOW);
+    }
+    else
+    {
+      digitalWrite(D1, HIGH);
+      digitalWrite(D2, HIGH);
+    }
     delay(50);
   }
   else if (topics == "TELESERA/instant_watering")
@@ -98,6 +114,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
     if((char)payload[0] == '1')
     {
       client.publish("TELESERA/instant_watering", "0");
+      digitalWrite(D3, LOW);
+      digitalWrite(D4, LOW);
+      delay(delay_time);
+      digitalWrite(D3, HIGH);
+      digitalWrite(D4, HIGH);
+      
     }
   }
 
@@ -159,6 +181,16 @@ void setup() {
   setup_wifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
+
+  pinMode(D1, OUTPUT);
+  pinMode(D2, OUTPUT);
+  pinMode(D3, OUTPUT);
+  pinMode(D4, OUTPUT);
+
+  digitalWrite(D1, HIGH);
+  digitalWrite(D2, HIGH);
+  digitalWrite(D3, HIGH);
+  digitalWrite(D4, HIGH);
 }
 
 int counter = 0;

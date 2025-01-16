@@ -39,8 +39,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static EditText etd1, etd2, etd3;
 
-    public static TextView txtSpeed, txtAngle, txtAcclr, txtBrake, txtLMSpeed, txtRMSpeed, txtLMTemp,
-            txtRMTemp, txtBatLvl, txtBatVol, txtBatTemp, txtBatSmk, txtDistnc, txtOTemp, txtPing, txtSysTime;
+    public static TextView txtTemp, txtHum, txtLight, txtTerrHum, txtFan, txtRMSpeed, txtSysTime;
     public static  boolean isConnected = false;
     public static  boolean isFanTurnedOn = false;
     private Timer timer;
@@ -58,12 +57,12 @@ public class MainActivity extends AppCompatActivity {
         button2 = findViewById(R.id.imageButton5);
         button3 = findViewById(R.id.imageButton6);
         button4 = findViewById(R.id.imageButton2);
-        txtSpeed = findViewById(R.id.textView2);
-        txtAngle = findViewById(R.id.textView3);
-        txtAcclr = findViewById(R.id.textView4);
-        txtBrake = findViewById(R.id.textView5);
-        txtLMSpeed = findViewById(R.id.textView6);
-        txtRMSpeed = findViewById(R.id.textView7);
+        txtTemp = findViewById(R.id.textView2);
+        txtHum = findViewById(R.id.textView3);
+        txtLight = findViewById(R.id.textView4);
+        txtTerrHum = findViewById(R.id.textView5);
+        txtFan = findViewById(R.id.textView6);
+        txtSysTime = findViewById(R.id.textView7);
         etd1 = findViewById(R.id.editTextNumberDecimal6);
         etd2 = findViewById(R.id.editTextNumberDecimal7);
         etd3 = findViewById(R.id.editTextNumberDecimal5);
@@ -132,12 +131,14 @@ public class MainActivity extends AppCompatActivity {
                             button2.setImageResource(R.drawable.fan_off);
                             publish("TELESERA/fan", "1");
                             isFanTurnedOn = true;
+                            txtFan.setText("Fan: Açık");
                         }
                         else
                         {
                             button2.setImageResource(R.drawable.fan_on);
                             publish("TELESERA/fan", "0");
                             isFanTurnedOn = false;
+                            txtFan.setText("Fan: Kapalı");
                         }
                     }
                 });
@@ -257,12 +258,11 @@ public class MainActivity extends AppCompatActivity {
                     Log.d(TAG, "message: " + msg);
 
                     switch(topic) {
-                        case "TELESERA/temp": txtSpeed.setText("Sıcaklık: " + msg + "°C"); break;
-                        case "TELESERA/hum": txtAngle.setText("Nem: %" + msg + ""); break;
-                        case "TELESERA/light": txtAcclr.setText("Işık: %" + msg + ""); break;
-                        case "TELESERA/brake": txtBrake.setText("Tprk Nemi: %" + msg + ""); break;
-                        case "TELESERA/terr_hum": txtLMSpeed.setText("Fan :" + msg + ""); break;
-                        case "TELESERA/fan": txtRMSpeed.setText("Sys Zmanı: " + msg + "dk"); break;
+                        case "TELESERA/temp": txtTemp.setText("Sıcaklık: " + msg + "°C"); break;
+                        case "TELESERA/hum": txtHum.setText("Nem: %" + msg + ""); break;
+                        case "TELESERA/light": txtLight.setText("Işık: %" + msg + ""); break;
+                        case "TELESERA/terr_hum": txtTerrHum.setText("Tprk Nemi: %" + msg + ""); break;
+                        case "TELESERA/systime": txtSysTime.setText("Sys Zmanı: " + msg + "dk"); break;
                     }
                 }
 
