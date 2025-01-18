@@ -43,13 +43,14 @@
 ADC_HandleTypeDef hadc1;
 
 TIM_HandleTypeDef htim6;
+TIM_HandleTypeDef htim7;
 
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 uint8_t Rx_data[8];
 uint8_t watering_time;
-uint8_t instant_watering_time;
+uint8_t instant_watering_time = 1;
 uint8_t waiting_time;
 char message[3];
 uint32_t channel1, channel2;
@@ -61,19 +62,23 @@ static void MX_GPIO_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/* Mikrosaniye mertebesinde bekleme yapan fonksiyonu tanimla */
 void delay (uint16_t time)
 {
-	/* change your code here for the delay in microseconds */
+	/* Timer sayacini sifirla */
 	__HAL_TIM_SET_COUNTER(&htim6, 0);
+	/* Sayac fonksiyona girilen degere ulasana kadar bekle */
 	while ((__HAL_TIM_GET_COUNTER(&htim6))<time);
 }
 
+/* DHT sensorundan gelen verileri okumak icin degiskenleri olustur */
 uint8_t Rh_byte1, Rh_byte2, Temp_byte1, Temp_byte2;
 uint16_t SUM, RH, TEMP;
 
@@ -81,6 +86,7 @@ float Temperature = 0;
 float Humidity = 0;
 uint8_t Presence = 0;
 
+/* Istenilen pini output olarak ayarlamak icin gerekli fonksiyonu tanimla */
 void Set_Pin_Output (GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
 {
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -90,6 +96,7 @@ void Set_Pin_Output (GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
 	HAL_GPIO_Init(GPIOx, &GPIO_InitStruct);
 }
 
+/* Istenilen pini input olarak ayarlamak icin gerekli fonksiyonu tanimla */
 void Set_Pin_Input (GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
 {
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -99,50 +106,72 @@ void Set_Pin_Input (GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
 	HAL_GPIO_Init(GPIOx, &GPIO_InitStruct);
 }
 
-/*********************************** DHT11 FUNCTIONS ********************************************/
-
+/* DHT sicaklik ve nem sensorunun bagli oldugu pin ve portu tanimla */
 #define DHT11_PORT GPIOA
 #define DHT11_PIN GPIO_PIN_1
 
+/* DHT sensorunun yanit vermesi icin gerekli verileri gonderecek fonksiyonu tanimla */
 void DHT11_Start (void)
 {
-	Set_Pin_Output (DHT11_PORT, DHT11_PIN);  // set the pin as output
-	HAL_GPIO_WritePin (DHT11_PORT, DHT11_PIN, 0);   // pull the pin low
-	delay (18000);   // wait for 18ms
-    HAL_GPIO_WritePin (DHT11_PORT, DHT11_PIN, 1);   // pull the pin high
-	delay (20);   // wait for 20us
-	Set_Pin_Input(DHT11_PORT, DHT11_PIN);    // set as input
+	/* DHT ye bagli pini output olarak ayarla */
+	Set_Pin_Output (DHT11_PORT, DHT11_PIN);
+	/* Pine logic low degeri gonder */
+	HAL_GPIO_WritePin (DHT11_PORT, DHT11_PIN, 0);
+	/* DHT satasheet inde belirtildigi uzere 18ms bekle */
+	delay (18000);
+	/* Pine logic high degeri gonder */
+    HAL_GPIO_WritePin (DHT11_PORT, DHT11_PIN, 1);
+    /* 20 mikrosaniye bekle */
+	delay (20);
+	/* DHT ye bagli pini input olarak ayarla */
+	Set_Pin_Input(DHT11_PORT, DHT11_PIN);
 }
 
+/* DHT sensorunun yanitini kontrol edecek fonksiyonu tanimla */
 uint8_t DHT11_Check_Response (void)
 {
 	uint8_t Response = 0;
+	/* 40 mikrosaniye bekle */
 	delay (40);
+	/* Pin degeri logic low olursa asagida verilenleri yap */
 	if (!(HAL_GPIO_ReadPin (DHT11_PORT, DHT11_PIN)))
 	{
+		/* 80 mikrosaniye bekle */
 		delay (80);
+		/* Alinan yaniti degiskene kaydet */
 		if ((HAL_GPIO_ReadPin (DHT11_PORT, DHT11_PIN))) Response = 1;
-		else Response = -1; // 255
+		else Response = -1;
 	}
-	while ((HAL_GPIO_ReadPin (DHT11_PORT, DHT11_PIN)));   // wait for the pin to go low
+	/* Pin degeri logic low olana kadar bekle */
+	while ((HAL_GPIO_ReadPin (DHT11_PORT, DHT11_PIN)));
 
+	/* Yanit degerini geri dondur */
 	return Response;
 }
 
+/* DHT sensorunden gelen verileri okuyacak fonksiyonu tanimla */
 uint8_t DHT11_Read (void)
 {
+	/* Gerekli degiskenleri tanimla */
 	uint8_t i,j;
 	for (j=0;j<8;j++)
 	{
-		while (!(HAL_GPIO_ReadPin (DHT11_PORT, DHT11_PIN)));   // wait for the pin to go high
-		delay (40);   // wait for 40 us
-		if (!(HAL_GPIO_ReadPin (DHT11_PORT, DHT11_PIN)))   // if the pin is low
+		/* Pin degeri logic low olana kadar bekle */
+		while (!(HAL_GPIO_ReadPin (DHT11_PORT, DHT11_PIN)));
+		/* 40 mikrosaniye bekle */
+		delay (40);
+		/* Pin degeri logic low olursa asagida verilenleri yap */
+		if (!(HAL_GPIO_ReadPin (DHT11_PORT, DHT11_PIN)))
 		{
-			i&= ~(1<<(7-j));   // write 0
+			/* Logic low degeri geldiginde dongu degerine gore biti kaydirip logic and ile kaydet */
+			i&= ~(1<<(7-j));
 		}
-		else i|= (1<<(7-j));  // if the pin is high, write 1
-		while ((HAL_GPIO_ReadPin (DHT11_PORT, DHT11_PIN)));  // wait for the pin to go low
+		/* Logic high degeri geldiginde dongu degerine gore biti kaydirip logic or ile kaydet */
+		else i|= (1<<(7-j));
+		/* Pin degeri logic high olana kadar bekle */
+		while ((HAL_GPIO_ReadPin (DHT11_PORT, DHT11_PIN)));
 	}
+	/* Elde edilen degeri geri dondur */
 	return i;
 }
 /* USER CODE END 0 */
@@ -179,10 +208,16 @@ int main(void)
   MX_TIM6_Init();
   MX_USART2_UART_Init();
   MX_ADC1_Init();
+  MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
+  /* Timer, uart kesmesi ve adc kesmesini baslat */
   HAL_TIM_Base_Start(&htim6);
   HAL_UART_Receive_IT(&huart2, Rx_data, 3);
   HAL_ADC_Start_IT(&hadc1);
+
+  /* Role pinlerini logic high seviyesine al */
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10|GPIO_PIN_11, GPIO_PIN_SET);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -192,46 +227,71 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  DHT11_Start();
-	   	  Presence = DHT11_Check_Response();
-	   	  Rh_byte1 = DHT11_Read ();
-	   	  Rh_byte2 = DHT11_Read ();
-	   	  Temp_byte1 = DHT11_Read ();
-	   	  Temp_byte2 = DHT11_Read ();
+	    /* DHT sensorunu baslat */
+	    DHT11_Start();
+	    /* Sensor yanitini kontrol et */
+	    Presence = DHT11_Check_Response();
+	    /* Gelen sicaklik ve nem degerlerini degiskenlere kaydet */
+	    Rh_byte1 = DHT11_Read ();
+	    Rh_byte2 = DHT11_Read ();
+	    Temp_byte1 = DHT11_Read ();
+	    Temp_byte2 = DHT11_Read ();
 
+	    /* 1,5sn bekle */
 	   	HAL_Delay(1500);
 
+	   	/* Gonderilen verilerin anlasilmasi icin basina veriye ozel byte degeri ekle */
 		message[0] = 123;
+		/* Integer bolmesi yaparak iki basamakli degerin onlar basamagini diziye kaydet */
 		message[1] = (channel1 / 10);
+		/* Mod alarak iki basamakli degerin onlar basamagini diziye kaydet */
 		message[2] = (channel1 % 10);
 
+		/* 1,5sn bekle */
 		HAL_Delay(1500);
 
+		/* Diziyi UART ile ESP tarafina gonder */
 		HAL_UART_Transmit(&huart2, (uint8_t*)message, 3, HAL_MAX_DELAY);
 
+		/* Gonderilen verilerin anlasilmasi icin basina veriye ozel byte degeri ekle */
 		message[0] = 124;
+		/* Integer bolmesi yaparak iki basamakli degerin onlar basamagini diziye kaydet */
 		message[1] = (channel2 / 10);
+		/* Mod alarak iki basamakli degerin onlar basamagini diziye kaydet */
 		message[2] = (channel2 % 10);
 
+		/* Diziyi UART ile ESP tarafina gonder */
 		HAL_UART_Transmit(&huart2, (uint8_t*)message, 3, HAL_MAX_DELAY);
 
+		/* 1,5sn bekle */
 	   	HAL_Delay(1500);
 	   	HAL_ADC_Start_IT(&hadc1);
 
+	   	/* Gonderilen verilerin anlasilmasi icin basina veriye ozel byte degeri ekle */
 	   	message[0] = 125;
+	   	/* Integer bolmesi yaparak iki basamakli degerin onlar basamagini diziye kaydet */
 	   	message[1] = (Rh_byte1 / 10);
+	   	/* Mod alarak iki basamakli degerin onlar basamagini diziye kaydet */
 	   	message[2] = (Rh_byte1 % 10);
 
+	   	/* 1,5sn bekle */
 	   	HAL_Delay(1500);
 
+	   	/* Diziyi UART ile ESP tarafina gonder */
 	   	HAL_UART_Transmit(&huart2, (uint8_t*)message, 3, HAL_MAX_DELAY);
 
+	   	/* Gonderilen verilerin anlasilmasi icin basina veriye ozel byte degeri ekle */
 		message[0] = 126;
+		/* Integer bolmesi yaparak iki basamakli degerin onlar basamagini diziye kaydet */
 		message[1] = (Temp_byte1 / 10);
+		/* Mod alarak iki basamakli degerin onlar basamagini diziye kaydet */
 		message[2] = (Temp_byte1 % 10);
 
-	  HAL_UART_Transmit(&huart2, (uint8_t*)message, 3, HAL_MAX_DELAY);
+		/* Diziyi UART ile ESP tarafina gonder */
+	    HAL_UART_Transmit(&huart2, (uint8_t*)message, 3, HAL_MAX_DELAY);
 
+	    /* UART kesmesini tekrardan aktiflestir */
+	    HAL_UART_Receive_IT(&huart2, Rx_data, 3);
   }
   /* USER CODE END 3 */
 }
@@ -381,6 +441,44 @@ static void MX_TIM6_Init(void)
 }
 
 /**
+  * @brief TIM7 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM7_Init(void)
+{
+
+  /* USER CODE BEGIN TIM7_Init 0 */
+
+  /* USER CODE END TIM7_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM7_Init 1 */
+
+  /* USER CODE END TIM7_Init 1 */
+  htim7.Instance = TIM7;
+  htim7.Init.Prescaler = 60000-1;
+  htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim7.Init.Period = 50000-1;
+  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM7_Init 2 */
+
+  /* USER CODE END TIM7_Init 2 */
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -457,21 +555,20 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-    // Read & Update The ADC Result
+    /* Conversion modda pinleri okumak icin static sayac degiskenini olustur */
 	static uint8_t counter = 1;
 	if(counter == 0)
 	{
-		// channel 1 sampling
+		/* 12 bitlik adc degerini yuzde olarak hesaplayip channel1 degiskenine kaydet */
 		channel1 = 100 - ((HAL_ADC_GetValue(&hadc1)*10)/409);
 		counter = 1;
 	}
 	else
 	{
-		// channel 2 sampling
+		/* 12 bitlik adc degerini yuzde olarak hesaplayip channel2 degiskenine kaydet */
 		channel2 = 100 - ((HAL_ADC_GetValue(&hadc1)*10)/409);
 		counter = 0;
 	}
-
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
@@ -482,29 +579,35 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	if((Rx_data[0] - '0') == 1)
 	{
 		/* char dan int e donustur */
-		watering_time = (Rx_data[1] - '0') * 10;
-		watering_time += (Rx_data[2] - '0');
+		/*watering_time = (Rx_data[1] - '0') * 10;
+		watering_time += (Rx_data[2] - '0');*/
 	}
 	else if((Rx_data[0] - '0') == 2)
 	{
 		/* char dan int e donustur */
-		waiting_time = (Rx_data[1] - '0') * 10;
+		/*waiting_time = (Rx_data[1] - '0') * 10;
 		waiting_time += (Rx_data[2] - '0');
+		if(waiting_time != 0)
+		{
+			__HAL_TIM_CLEAR_IT(&htim7, TIM_IT_UPDATE);
+			__HAL_TIM_SET_COUNTER(&htim7, 0);
+			HAL_TIM_Base_Start_IT(&htim7);
+		}*/
 	}
 	else if((Rx_data[0] - '0') == 3)
 	{
 		/* char dan int e donustur */
-		instant_watering_time = (Rx_data[1] - '0') * 10;
-		instant_watering_time += (Rx_data[2] - '0');
+		/*instant_watering_time = (Rx_data[1] - '0') * 10;
+		instant_watering_time += (Rx_data[2] - '0');*/
 	}
 	else if((Rx_data[0] - '0') == 4)
 	{
 		if((Rx_data[1] - '0') == 1)
 		{
 			//do instant watering
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET);
+			/*HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_RESET);
 			HAL_Delay(instant_watering_time * 1000);
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET);*/
 		}
 		else
 		{
@@ -513,15 +616,28 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		if((Rx_data[2] - '0') == 1)
 		{
 			//turn on fan
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_SET);
+			//HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_RESET);
 		}
 		else
 		{
 			//turn off fan
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_RESET);
+			//HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_SET);
 		}
 	}
 
+	//HAL_UART_Receive_IT(&huart2, Rx_data, 3);
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	//HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_SET);
+	waiting_time--;
+	if(waiting_time <= 0)
+	{
+		__HAL_TIM_CLEAR_IT(&htim7, TIM_IT_UPDATE);
+		__HAL_TIM_SET_COUNTER(&htim7, 0);
+		HAL_TIM_Base_Stop_IT(&htim7);
+	}
 }
 /* USER CODE END 4 */
 

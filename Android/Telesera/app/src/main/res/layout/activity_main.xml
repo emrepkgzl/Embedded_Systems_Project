@@ -177,7 +177,8 @@
                 android:layout_weight="1"
                 android:text="Sys Zmanı: 0dk"
                 android:textColor="#1c5232"
-                android:textSize="22sp" />
+                android:textSize="22sp"
+                tools:visibility="invisible" />
 
         </LinearLayout>
 
